@@ -1,20 +1,20 @@
 import { create } from "zustand";
-import { checkBgAffiliateStatusWithToken } from '@/lib/api';
 import axiosClient from "@/utils/axiosClient";
 
-type LoginMethod = 'telegram' | 'google' | 'phantom' | null;
+type LoginMethod = 'telegram' | 'google' | 'manual' | null;
 
 interface User {
-  walletId: number
-  solanaAddress: string
-  nickName: string
-  ethAddress: string
-  isBgAffiliate: boolean
-  telegramId?: string
-  email?: string
-  level?: number
-  commissionPercent?: number
-  code?: string
+  username: string
+  email: string
+  telegram_id?: string
+  referral_code: string
+  fullname: string
+  avatar?: string
+  birthday?: string
+  sex?: string
+  is_master: boolean
+  wallet_id: number
+  wallet_address: string
 }
 
 interface AuthState {
@@ -22,97 +22,73 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   loginMethod: LoginMethod
-  login: (token?: string) => Promise<void>
+  login: (credentials?: LoginCredentials) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
   setLoginMethod: (method: LoginMethod) => void
 }
 
-const useAuthStore = create<AuthState>((set, get) => {
-  // Initialize from localStorage
-  const isLoggedIn = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-  const loginMethod = typeof window !== "undefined" ? localStorage.getItem("login_method") as LoginMethod : null;
+interface LoginCredentials {
+  username?: string
+  password?: string
+  telegram_id?: string
+  code?: string
+  google_code?: string
+}
 
+const useAuthStore = create<AuthState>((set, get) => {
   return {
     user: null,
-    isAuthenticated: !!isLoggedIn,
+    isAuthenticated: false,
     isLoading: true,
-    loginMethod: loginMethod,
+    loginMethod: null,
 
-    login: async (token?: string) => {
+    login: async (credentials?: LoginCredentials) => {
       try {
-        if (token) {
-          localStorage.setItem("auth_token", token);
-        } else {
-          localStorage.setItem("auth_token", "true");
-        }
-        
-        // Call BG Affiliate API to get status
-        try {
-          const bgData = await checkBgAffiliateStatusWithToken();
-          console.log("bgData", bgData);
-          
-          if (bgData) {
-            const userData: User = {
-              walletId: bgData.currentWallet?.walletId || 0,
-              solanaAddress: bgData.currentWallet?.solanaAddress || '',
-              nickName: bgData.currentWallet?.nickName || 'User',
-              ethAddress: bgData.currentWallet?.ethAddress || '',
-              isBgAffiliate: bgData.isBgAffiliate || false,
-              telegramId: undefined, // Will be set from JWT token if available
-              email: undefined, // Will be set from JWT token if available
-              level: bgData.bgAffiliateInfo?.level,
-              commissionPercent: bgData.bgAffiliateInfo?.commissionPercent,
-              code: bgData.currentWallet?.refCode
-            };
-            
-            set({ 
-              user: userData, 
-              isAuthenticated: true, 
-              isLoading: false 
-            });
-          } else {
-            // Fallback user data if BG API fails
-            const userData: User = {
-              walletId: 0,
-              solanaAddress: '',
-              nickName: 'User',
-              ethAddress: '',
-              isBgAffiliate: false
-            };
-            
-            set({ 
-              user: userData, 
-              isAuthenticated: true, 
-              isLoading: false 
-            });
-          }
-        } catch (bgError) {
-          console.error('BG Affiliate API error:', bgError);
-          // Set basic user data if BG API fails
-          const userData: User = {
-            walletId: 0,
-            solanaAddress: '',
-            nickName: 'User',
-            ethAddress: '',
-            isBgAffiliate: false
+        let endpoint = '/bg-ref/auth/login';
+        let payload: any = {};
+
+        if (credentials?.username && credentials?.password) {
+          // Manual login - BG Affiliate System API
+          payload = {
+            username: credentials.username,
+            password: credentials.password
           };
-          
-          set({ 
-            user: userData, 
-            isAuthenticated: true, 
-            isLoading: false 
-          });
+          set({ loginMethod: 'manual' });
+        } else if (credentials?.telegram_id && credentials?.code) {
+          // Telegram login - BG Affiliate System API
+          endpoint = '/bg-ref/auth/telegram-login';
+          payload = {
+            telegram_id: credentials.telegram_id,
+            code: credentials.code
+          };
+          set({ loginMethod: 'telegram' });
+        } else if (credentials?.google_code) {
+          // Google login - BG Affiliate System API
+          endpoint = '/bg-ref/auth/google-login';
+          payload = {
+            code: credentials.google_code
+          };
+          set({ loginMethod: 'google' });
+        } else {
+          throw new Error('Invalid login credentials');
         }
+
+        // Call login API - cookies will be set automatically
+        await axiosClient.post(endpoint, payload, { withCredentials: true });
+        
+        // Get user info after successful login
+        await get().refreshUser();
+        
       } catch (error) {
         console.error('Failed to login:', error);
         set({ isLoading: false });
+        throw error;
       }
     },
 
     logout: () => {
-      axiosClient.post("/bg-ref/logout");
-      localStorage.removeItem("auth_token");
+      axiosClient.post("/bg-ref/auth/logout", {}, { withCredentials: true });
       set({ 
         user: null, 
         isAuthenticated: false, 
@@ -123,43 +99,16 @@ const useAuthStore = create<AuthState>((set, get) => {
     },
 
     refreshUser: async () => {
-      const token = localStorage.getItem("auth_token");
-      
-      if (!token) {
-        set({ user: null, isAuthenticated: false, isLoading: false });
-        return;
-      }
-
       try {
-        // Check BG Affiliate status using the token
-        try {
-          const bgAffiliateInfo = await checkBgAffiliateStatusWithToken();
-          
-          if (bgAffiliateInfo) {
-            const userData: User = {
-              walletId: bgAffiliateInfo.currentWallet?.walletId || 0,
-              solanaAddress: bgAffiliateInfo.currentWallet?.solanaAddress || '',
-              nickName: bgAffiliateInfo.currentWallet?.nickName || 'User',
-              ethAddress: bgAffiliateInfo.currentWallet?.ethAddress || '',
-              isBgAffiliate: bgAffiliateInfo.isBgAffiliate || false,
-              telegramId: undefined, // Will be set from JWT token if available
-              email: undefined, // Will be set from JWT token if available
-              level: bgAffiliateInfo.bgAffiliateInfo?.level,
-              commissionPercent: bgAffiliateInfo.bgAffiliateInfo?.commissionPercent,
-              code: bgAffiliateInfo.currentWallet?.refCode
-            };
-            
-            set({ user: userData, isAuthenticated: true, isLoading: false });
-          } else {
-            set({ user: null, isAuthenticated: false, isLoading: false });
-          }
-        } catch (bgError) {
-          console.error('BG Affiliate API error:', bgError);
-          set({ user: null, isAuthenticated: false, isLoading: false });
-        }
+        // BG Affiliate System API - Get BG info
+        const response = await axiosClient.get('/bg-ref/me', { withCredentials: true });
+        // Response format: { success, message, user, bg_affiliate_info, wallet_info }
+        const userData: User = response.data.user;
+        
+        set({ user: userData, isAuthenticated: true, isLoading: false });
       } catch (error) {
         console.error('Failed to refresh user:', error);
-        get().logout();
+        set({ user: null, isAuthenticated: false, isLoading: false });
       }
     },
 

@@ -37,7 +37,8 @@
     "applyFilters": "필터 적용",
     "reset": "재설정",
     "id": "ID",
-    "switchLanguage": "언어 변경"
+    "switchLanguage": "언어 변경",
+    "n/a": "N/A"
   },
   "auth": {
     "login": "로그인",
@@ -135,6 +136,9 @@
     "to": "까지",
     "updateCommission": "수수료 업데이트",
     "updatePercentCommission": "수수료 비율 업데이트",
+    "minTransactions": "최소 거래",
+    "maxTransactions": "최대 거래",
+    "total": "총",
     "commissionRate": "수수료 비율",
     "newRate": "새 비율",
     "currentRate": "현재 비율",
@@ -146,6 +150,9 @@
     "rateTooHigh": "수수료 비율은 100%를 초과할 수 없습니다",
     "rateExceedsCurrent": "새 수수료 비율은 현재 비율보다 클 수 없습니다",
     "rateExceedsParent": "하위 라인에 영향을 주지 않도록 수수료 비율은 {percent}%를 초과할 수 없습니다",
+    "userNotFound": "사용자를 찾을 수 없습니다",
+    "noPermission": "이 수수료를 업데이트할 권한이 없습니다",
+    "onlyDirectDownline": "직접 하위 라인 멤버의 수수료만 업데이트할 수 있습니다",
     "totalCommission": "총 수수료",
     "commission": "수수료",
     "minCommission": "최소 수수료",
@@ -163,7 +170,14 @@
     "aliasRequired": "닉네임은 비워둘 수 없습니다",
     "aliasTooLong": "닉네임은 255자를 초과할 수 없습니다",
     "aliasUpdateSuccess": "닉네임이 성공적으로 업데이트되었습니다",
-    "aliasUpdateError": "닉네임 업데이트에 실패했습니다"
+    "aliasUpdateError": "닉네임 업데이트에 실패했습니다",
+    "name": "이름",
+    "wallet": "지갑",
+    "nickname": "닉네임",
+    "nicknamePlaceholder": "닉네임 입력",
+    "nicknameUpdateSuccess": "닉네임이 성공적으로 업데이트되었습니다",
+    "nicknameUpdateError": "닉네임 업데이트에 실패했습니다",
+    "nicknameRequired": "닉네임은 필수입니다"
   },
   "affiliate": {
     "tree": "어필리에이트 트리",
@@ -188,7 +202,10 @@
     "detailedMembers": "상세 멤버",
     "noMembersFound": "필터와 일치하는 하위 라인 멤버가 없습니다.",
     "walletId": "지갑 ID",
-    "nickname": "닉네임",
+    "name": "이름",
+    "lastTransactionDate": "마지막 거래 날짜",
+    "downlineCount": "하위 라인 수",
+    "address": "주소",
     "treeInfo": "어필리에이트 트리 정보",
     "treeDescription": "어필리에이트 트리 구조 및 하위 라인 멤버 통계",
     "levelCount": "레벨 수",
@@ -364,7 +381,12 @@
     "confirmInfo3": "처리 후 거래 해시가 제공됩니다",
     "confirmWithdraw": "출금 확인",
     "cancel": "취소",
-    "minimumAmount": "출금 최소 금액은 10달러입니다"
+    "minimumAmount": "출금 최소 금액은 10달러입니다",
+    "walletAddress": "지갑 주소",
+    "hasBeenWithdrawn": "가 성공적으로 출금되었습니다",
+    "pleaseTryAgain": "나중에 다시 시도해 주세요",
+    "withdrawalRetryProcessing": "출금 재시도가 처리 중입니다",
+    "noWalletAddress": "지갑 주소를 찾을 수 없습니다. 먼저 지갑을 설정해 주세요."
   },
   "connectPage": {
     "title": "계정 연결",
@@ -374,8 +396,8 @@
     },
     "login": {
       "title": "로그인",
-      "email": "이메일",
-      "emailPlaceholder": "이메일을 입력하세요",
+      "username": "사용자 이름",
+      "usernamePlaceholder": "사용자 이름을 입력하세요",
       "password": "비밀번호",
       "passwordPlaceholder": "비밀번호를 입력하세요",
       "forgotPassword": "비밀번호를 잊으셨나요?",

@@ -75,7 +75,7 @@ export default function BgAffiliateStats() {
           <span>{stats.isBgAffiliate ? t("common.yes") : t("common.no")}</span>
         </div> */}
         {/* Referral Link Box */}
-        {user?.code && (
+        {user?.referral_code && (
           <div className="grid gap-3 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group animate-in slide-in-from-bottom-2">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-gradient-to-r from-yellow-500 to-orange-600 rounded">
@@ -85,11 +85,11 @@ export default function BgAffiliateStats() {
             </div>
             <div className="flex items-center gap-2 p-3 bg-white/50 rounded-lg border border-orange-200">
               <span className="font-mono text-sm text-orange-700 break-all min-w-0 flex-1 md:break-normal md:truncate">
-                https://bitworld-mmp-fe-production.up.railway.app/?ref={user.code}
+              https://goldengame.chessman.vip/?ref={user.referral_code}
               </span>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`https://bitworld-mmp-fe-production.up.railway.app/?ref=${user.code}`)
+                  navigator.clipboard.writeText(`https://bitworld-mmp-fe-production.up.railway.app/?ref=${user.referral_code}`)
                   toast.success(t("messages.copiedToClipboard"))
                 }}
                 className="p-2 hover:bg-orange-100 rounded transition-all duration-200 hover:scale-110"
@@ -104,7 +104,7 @@ export default function BgAffiliateStats() {
           </div>
         )}
 
-        {stats.treeInfo.rootWallet &&
+        {stats?.tree_info?.tree_id &&
           <div className="grid gap-3 p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group animate-in slide-in-from-bottom-2">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-gradient-to-r from-blue-500 to-cyan-600 rounded">
@@ -117,33 +117,17 @@ export default function BgAffiliateStats() {
                 <Hash className="h-3 w-3 text-blue-500" />
                 <span className="font-medium">{t("affiliate.treeId")}:</span>
               </div>
-              <div className="font-mono bg-white/50 p-1 rounded text-blue-700">{stats.treeInfo.treeId}</div>
-
-              <div className="flex items-center gap-2">
-                <Wallet className="h-3 w-3 text-yellow-500" />
-                <span className="font-medium">{t("affiliate.treeWalletAddress")}:</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono bg-white/50 p-1 rounded text-yellow-700 truncate">
-                  {stats.treeInfo.rootWallet?.solanaAddress.substring(0, 7)}...{stats.treeInfo.rootWallet?.solanaAddress.substring(stats.treeInfo.rootWallet.solanaAddress.length - 4)}
-                </span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(stats.treeInfo.rootWallet?.solanaAddress)}
-                  className="p-1 hover:bg-yellow-100 rounded transition-all duration-200 hover:scale-110"
-                >
-                  <Copy className="h-3 w-3 text-yellow-500" />
-                </button>
-              </div>
+              <div className="font-mono bg-white/50 p-1 rounded text-blue-700">{stats.tree_info.tree_id}</div>
 
               <div className="flex items-center gap-2">
                 <DollarSign className="h-3 w-3 text-green-500" />
                 <span className="font-medium">{t("commission.totalCommission")} {t("commission.percentage")}:</span>
               </div>
-              <div className="font-bold text-green-600 group-hover:text-green-700 transition-colors">{stats.treeInfo.totalCommissionPercent}%</div>
+              <div className="font-bold text-green-600 group-hover:text-green-700 transition-colors">{stats.tree_info.total_commission_percent}%</div>
             </div>
           </div>
         }
-        {stats?.currentWallet &&
+        {stats?.current_wallet &&
           <div className="grid gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group animate-in slide-in-from-bottom-2 delay-200">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-gradient-to-r from-purple-500 to-pink-600 rounded">
@@ -156,8 +140,8 @@ export default function BgAffiliateStats() {
                 <Hash className="h-3 w-3 text-purple-500" />
                 <span className="font-medium">BITWORLD UID:</span>
               </div>
-              <div className="font-mono bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{stats.currentWallet.bittworldUid}  <button
-                onClick={() => navigator.clipboard.writeText(stats.currentWallet?.bittworldUid)}
+              <div className="font-mono bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{stats.current_wallet.user?.id}  <button
+                onClick={() => navigator.clipboard.writeText(stats.current_wallet?.user?.id?.toString())}
                 className="p-1 hover:bg-purple-100 rounded transition-all duration-200 hover:scale-110"
               >
                 <Copy className="h-3 w-3 text-white" />
@@ -166,19 +150,19 @@ export default function BgAffiliateStats() {
                 <UserCheck className="h-3 w-3 text-purple-500" />
                 <span className="font-medium">{t("auth.email")}:</span>
               </div>
-              <div className="font-mono cursor-pointer text-[#009144]/70 py-1 px-2 font-semibold rounded w-fit flex items-center gap-2 break-all md:break-normal md:truncate">{stats.currentWallet?.email}</div>
+              <div className="font-mono cursor-pointer text-[#009144]/70 py-1 px-2 font-semibold rounded w-fit flex items-center gap-2 break-all md:break-normal md:truncate">{stats.current_wallet?.user?.email}</div>
 
               <div className="flex items-center gap-2">
                 <UserCheck className="h-3 w-3 text-purple-500" />
                 <span className="font-medium">{t("auth.referralCode")}:</span>
               </div>
-              <div onClick={() => navigator.clipboard.writeText(user?.code ?? "")} className="font-mono cursor-pointer bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{user?.code} <Copy className="h-3 w-3 text-white" /></div>
+              <div onClick={() => navigator.clipboard.writeText(user?.referral_code ?? "")} className="font-mono cursor-pointer bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{user?.referral_code} <Copy className="h-3 w-3 text-white" /></div>
 
               <div className="flex items-center gap-2">
                 <UserCheck className="h-3 w-3 text-purple-500" />
-                <span className="font-medium">{t("commission.currentAlias")}:</span>
+                <span className="font-medium">{t("affiliate.bgAlias")}:</span>
               </div>
-              <div className="font-mono bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{stats.currentWallet.bgAlias ?? stats.currentWallet.nickName}</div>
+              <div className="font-mono bg-[#009144]/70 py-1 px-2 font-semibold rounded text-white w-fit flex items-center gap-2">{stats.current_wallet.bg_alias ?? stats.current_wallet.user?.fullname ?? "-"}</div>
 
               <div className="flex items-center gap-2">
                 <UserCheck className="h-3 w-3 text-purple-500" />
@@ -186,10 +170,10 @@ export default function BgAffiliateStats() {
               </div>
               <div className="flex items-center gap-2 bg-[#009144]/70 py-1 px-2 font-semibold w-fit rounded ">
                 <span className="font-mono text-white truncate">
-                  {stats.currentWallet?.solanaAddress.substring(0, 4)}...{stats.currentWallet?.solanaAddress.substring(stats.currentWallet.solanaAddress.length - 4)}
+                  {stats.current_wallet?.address.substring(0, 4)}...{stats.current_wallet?.address.substring(stats.current_wallet.address.length - 4)}
                 </span>
                 <button
-                  onClick={() => navigator.clipboard.writeText(stats.currentWallet?.solanaAddress)}
+                  onClick={() => navigator.clipboard.writeText(stats.current_wallet?.address)}
                   className="p-1 hover:bg-purple-100 rounded transition-all duration-200 hover:scale-110"
                 >
                   <Copy className="h-3 w-3 text-white" />
@@ -200,7 +184,7 @@ export default function BgAffiliateStats() {
                 <DollarSign className="h-3 w-3 text-green-500" />
                 <span className="font-medium">{t("commission.commissionRate")}:</span>
               </div>
-              <div className="font-bold text-green-600 group-hover:text-green-700 transition-colors">{stats.treeInfo.totalCommissionPercent}%</div>
+              <div className="font-bold text-green-600 group-hover:text-green-700 transition-colors">{stats.tree_info?.total_commission_percent}%</div>
             </div>
           </div>
         }

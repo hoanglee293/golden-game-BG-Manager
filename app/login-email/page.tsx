@@ -1,7 +1,6 @@
 "use client"
 import React, { useEffect, useRef, Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { login as googleLogin } from '@/services/api/GoogleService'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -42,32 +41,29 @@ function LoginEmailContent() {
   const handleLogin = async () => {
     setIsProcessing(true);
     try {
-      const res = await googleLogin(code!);
-      console.log("res", res);
-      if (res.status === 401 || res.status === 400) {
-        setShowErrorModal(true);
-        console.error('Login failed:', res);
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else if (res.status == 200 || res.status == 201) {
-        console.log("res.token", res.token);
-        // Call login function to set user data (BG Affiliate API will be called in login function)
-        await login(res.token);
-        // Show success message based on BG Affiliate status
-        toast.success(t("auth.emailSuccess"));
-        setTimeout(() => {
-          router.push('/');
-        }, 1500);
-      } else {
-        toast.error(t("auth.emailFailed"));
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      }
+      await login({
+        google_code: code!
+      });
+      
+      toast.success(t("auth.emailSuccess"));
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
     } catch (error: any) {
       console.error('Email login error:', error);
-      toast.error(t("auth.emailConnectionError"));
+      
+      if (error.response?.data?.message === 'Failed to exchange code for token') {
+        toast.error('Không thể trao đổi mã xác thực');
+      } else if (error.response?.data?.message === 'Invalid token issuer') {
+        toast.error('Token không hợp lệ');
+      } else if (error.response?.data?.message === 'Email not verified') {
+        toast.error('Email chưa được xác thực');
+      } else if (error.response?.data?.message === 'Invalid Google token') {
+        toast.error('Token Google không hợp lệ');
+      } else {
+        toast.error(t("auth.emailConnectionError"));
+      }
+      
       setTimeout(() => {
         router.push('/login');
       }, 2000);
@@ -81,7 +77,7 @@ function LoginEmailContent() {
       <div className="w-full max-w-md bg-gradient-to-br from-blue-50/70 to-indigo-100/70 rounded-xl">
         <div className="shadow-xl w-full h-full rounded-xl bg-theme-blue-300 p-8 text-center">
           <div className="mx-auto max-w-[200px] h-auto rounded-lg flex items-center justify-center mb-4">
-            <img src="/bitworld-logo-light.png" alt="logo" className="rounded-lg" />
+            <img src="/logo.png" alt="logo" className="rounded-lg" />
           </div>
           <h2 className="text-2xl font-bold mb-4 uppercase">BG Affiliate</h2>
           

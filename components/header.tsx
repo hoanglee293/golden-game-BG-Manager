@@ -31,8 +31,8 @@ export default function Header() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-full h-auto max-w-[200px] rounded-lg flex items-center justify-center">
-                <img src="/bitworld-logo-light.png" alt="logo" className="w-full h-auto" />
+              <div className="w-full h-auto max-w-[180px] rounded-lg flex items-center justify-center">
+                <img src="/logo.png" alt="logo" className="w-full h-auto" />
               </div>
             </div>
             <div className="h-8 w-20 bg-muted animate-pulse rounded"></div>
@@ -47,8 +47,8 @@ export default function Header() {
       <div className="px-4 py-2  w-full">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-full h-auto max-w-[200px] rounded-lg flex items-center justify-center">
-              <img src="/bitworld-logo-light.png" alt="logo" className="w-full h-auto" />
+            <div className="w-full h-auto max-w-[180px] rounded-lg flex items-center justify-center">
+              <img src="/logo.png" alt="logo" className="w-full h-auto" />
             </div>
           </div>
 
@@ -59,7 +59,7 @@ export default function Header() {
               <>
                 <div className="hidden md:flex items-center space-x-2 text-sm text-muted-foreground">
                   <Wallet className="h-4 w-4" />
-                  <span>{t("auth.solana")}: {formatWalletAddress(user.solanaAddress)}</span>
+                  <span>{t("auth.profile")}: {formatWalletAddress(user.wallet_address)}</span>
                 </div>
                 
                 <DropdownMenu>
@@ -67,7 +67,7 @@ export default function Header() {
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          {user.nickName ? user.nickName.charAt(0).toUpperCase() : "U"}
+                          {user.username ? user.username.charAt(0).toUpperCase() : "U"}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -75,9 +75,9 @@ export default function Header() {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.nickName || t("auth.user")} &ensp; {user.isBgAffiliate && <Badge variant="outline" className="text-xs">{t("auth.bgAffiliateBadge")}</Badge>}</p>
+                        <p className="text-sm font-medium leading-none">{user.username || t("auth.user")} &ensp; {user.is_master && <Badge variant="outline" className="text-xs">{t("auth.bgAffiliateBadge")}</Badge>}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user.telegramId ? `${t("auth.telegramId")}: ${user.telegramId}` : formatWalletAddress(user.solanaAddress)}
+                          {user.telegram_id ? `${t("auth.telegramId")}: ${user.telegram_id}` : formatWalletAddress(user.wallet_address)}
                         </p>
                         {user.email && (
                           <p className="text-xs leading-none text-muted-foreground">

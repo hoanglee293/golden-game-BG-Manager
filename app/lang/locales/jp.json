@@ -37,7 +37,8 @@
     "applyFilters": "フィルターを適用",
     "reset": "リセット",
     "id": "ID",
-    "switchLanguage": "言語を切り替え"
+    "switchLanguage": "言語を切り替え",
+    "n/a": "N/A"
   },
   "auth": {
     "login": "ログイン",
@@ -144,6 +145,9 @@
     "rateTooHigh": "コミッション率は100%を超えることはできません",
     "rateExceedsCurrent": "新しいコミッション率は現在の率より大きくすることはできません",
     "rateExceedsParent": "ダウンラインに影響を与えないよう、コミッション率は{percent}%を超えることはできません",
+    "userNotFound": "ユーザーが見つかりません",
+    "noPermission": "このコミッションを更新する権限がありません",
+    "onlyDirectDownline": "直接のダウンラインメンバーのみコミッションを更新できます",
     "totalCommission": "総コミッション",
     "commission": "コミッション",
     "minCommission": "最小コミッション",
@@ -362,7 +366,12 @@
     "confirmInfo3": "処理後、取引ハッシュが提供されます",
     "confirmWithdraw": "出金確認",
     "cancel": "キャンセル",
-    "minimumAmount": "出金の最低金額は10ドルです"
+    "minimumAmount": "出金の最低金額は10ドルです",
+    "walletAddress": "ウォレットアドレス",
+    "hasBeenWithdrawn": "が正常に出金されました",
+    "pleaseTryAgain": "後でもう一度お試しください",
+    "withdrawalRetryProcessing": "出金再試行が処理中です",
+    "noWalletAddress": "ウォレットアドレスが見つかりません。最初にウォレットを設定してください。"
   },
   "connectPage": {
     "title": "アカウント接続",

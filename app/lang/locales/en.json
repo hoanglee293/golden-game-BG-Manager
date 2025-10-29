@@ -37,7 +37,8 @@
     "applyFilters": "Apply Filters",
     "reset": "Reset",
     "id": "ID",
-    "switchLanguage": "Switch language"
+    "switchLanguage": "Switch language",
+    "n/a": "N/A"
   },
   "auth": {
     "login": "Login",
@@ -134,7 +135,10 @@
     "from": "From",
     "to": "To",
     "updateCommission": "Update Commission",
+    "minTransactions": "Minimum Transactions",
     "updatePercentCommission": "Update Percent Commission",
+    "maxTransactions": "Maximum Transactions",
+    "total": "Total",
     "commissionRate": "Commission Rate",
     "newRate": "New Rate",
     "currentRate": "Current Rate",
@@ -146,6 +150,9 @@
     "rateTooHigh": "Commission rate cannot exceed 100%",
     "rateExceedsCurrent": "New commission rate cannot be greater than current rate",
     "rateExceedsParent": "Commission percent cannot exceed {percent}% to avoid affecting the downline",
+    "userNotFound": "User not found",
+    "noPermission": "You do not have permission to update this commission",
+    "onlyDirectDownline": "You can only update commission for your direct downline members",
     "totalCommission": "Total Commission",
     "commission": "Commission",
     "minCommission": "Minimum Commission",
@@ -163,11 +170,19 @@
     "aliasRequired": "Nickname cannot be empty",
     "aliasTooLong": "Nickname cannot exceed 255 characters",
     "aliasUpdateSuccess": "Nickname updated successfully",
-    "aliasUpdateError": "Failed to update alias"
+    "aliasUpdateError": "Failed to update alias",
+    "name": "Name",
+    "wallet": "Wallet",
+    "nicknamePlaceholder": "Enter your nickname",
+    "nicknameUpdateSuccess": "Nickname updated successfully",
+    "nicknameUpdateError": "Failed to update nickname",
+    "nicknameRequired": "Nickname is required"
   },
   "affiliate": {
     "tree": "Affiliate Tree",
     "downline": "Downline",
+    "downlineCount": "Downline Count",
+    "address": "Address",
     "upline": "Upline",
     "referrer": "Referrer",
     "referred": "Referred",
@@ -188,7 +203,8 @@
     "detailedMembers": "Detailed Members",
     "noMembersFound": "No downline members found matching the filters.",
     "walletId": "BITWORLD ID",
-    "nickname": "Nickname",
+    "name": "Name",
+    "lastTransactionDate": "Last Transaction Date",
     "treeInfo": "Affiliate Tree Information",
     "treeDescription": "Affiliate tree structure and downline member statistics",
     "levelCount": "Level Count",
@@ -364,7 +380,12 @@
     "confirmInfo3": "Transaction hash will be provided once processed",
     "confirmWithdraw": "Confirm Withdraw",
     "cancel": "Cancel",
-    "minimumAmount": "Minimum amount to withdraw is $10"
+    "minimumAmount": "Minimum amount to withdraw is $10",
+    "walletAddress": "Wallet Address",
+    "hasBeenWithdrawn": "has been withdrawn successfully",
+    "pleaseTryAgain": "Please try again later",
+    "withdrawalRetryProcessing": "Your withdrawal retry is being processed",
+    "noWalletAddress": "No wallet address found. Please configure your wallet first."
   },
   "connectPage": {
     "title": "Connect Account",
@@ -374,8 +395,8 @@
     },
     "login": {
       "title": "Login",
-      "email": "Email",
-      "emailPlaceholder": "Enter your email",
+      "username": "Username",
+      "usernamePlaceholder": "Enter your username",
       "password": "Password",
       "passwordPlaceholder": "Enter your password",
       "forgotPassword": "Forgot password?",

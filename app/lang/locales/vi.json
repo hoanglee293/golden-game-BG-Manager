@@ -37,7 +37,8 @@
     "applyFilters": "Áp dụng bộ lọc",
     "reset": "Đặt lại",
     "id": "ID",
-    "switchLanguage": "Chuyển đổi ngôn ngữ"
+    "switchLanguage": "Chuyển đổi ngôn ngữ",
+    "n/a": "N/A"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -144,6 +145,9 @@
     "rateTooHigh": "Tỷ lệ hoa hồng không được vượt quá 100%",
     "rateExceedsCurrent": "Tỷ lệ hoa hồng mới không được lớn hơn tỷ lệ hiện tại",
     "rateExceedsParent": "Phần trăm hoa hồng không được vượt quá {percent}% để tránh ảnh hưởng đến tuyến dưới",
+    "userNotFound": "Không tìm thấy người dùng",
+    "noPermission": "Bạn không có quyền cập nhật hoa hồng này",
+    "onlyDirectDownline": "Bạn chỉ có thể cập nhật hoa hồng cho thành viên trực tiếp tuyến dưới của bạn",
     "totalCommission": "Tổng hoa hồng",
     "commission": "Hoa hồng",
     "minCommission": "Hoa hồng tối thiểu",
@@ -362,7 +366,12 @@
     "confirmInfo3": "Hash giao dịch sẽ được cung cấp sau khi xử lý",
     "confirmWithdraw": "Xác nhận rút tiền",
     "cancel": "Hủy",
-    "minimumAmount": "Số tiền tối thiểu để rút thưởng là 10$"
+    "minimumAmount": "Số tiền tối thiểu để rút thưởng là 10$",
+    "walletAddress": "Địa chỉ ví",
+    "hasBeenWithdrawn": "đã được rút thành công",
+    "pleaseTryAgain": "Vui lòng thử lại sau",
+    "withdrawalRetryProcessing": "Yêu cầu rút tiền lại của bạn đang được xử lý",
+    "noWalletAddress": "Không tìm thấy địa chỉ ví. Vui lòng cấu hình ví của bạn trước."
   },
   "connectPage": {
     "title": "Kết nối tài khoản",

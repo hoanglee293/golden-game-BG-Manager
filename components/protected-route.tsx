@@ -33,7 +33,7 @@ export default function ProtectedRoute({ children, requireBgAffiliate = true }: 
   // Check if user has required data for BG Affiliate
   useEffect(() => {
     if (!isLoading && isAuthenticated && user && requireBgAffiliate) {
-      if (!user.isBgAffiliate) {
+      if (!user) {
         toast.error(t("messages.notBgAffiliate"))
         router.push('/unauthorized')
       }
@@ -58,7 +58,7 @@ export default function ProtectedRoute({ children, requireBgAffiliate = true }: 
   }
 
   // Check BG Affiliate requirement
-  if (requireBgAffiliate && user && !user.isBgAffiliate) {
+  if (requireBgAffiliate && !user) {
     return null
   }
 

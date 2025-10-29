@@ -36,32 +36,28 @@ function TelegramLoginContent() {
     const handleLogin = async () => {
         setIsProcessing(true);
         try {
-            const data = { id: telegramId, code: code };
-            const res = await TelegramWalletService.login(data);
-            console.log("res", res);
-            if (res.status === 401 || res.status === 400) {
-                toast.error(t("auth.telegramFailed"));
-                setTimeout(() => {
-                    router.push('/login');
-                }, 2000);
-            } else if (res.status == 200 || res.status == 201) {
-                console.log("res.token", res.token);
-                // Call login function to set user data (BG Affiliate API will be called in login function)
-                await login(res.token);
-                // Show success message based on BG Affiliate status
-                toast.success(t("auth.telegramSuccess"));
-                setTimeout(() => {
-                    router.push('/');
-                }, 1500);
-            } else {
-                toast.error(t("auth.telegramFailed"));
-                setTimeout(() => {
-                    router.push('/login');
-                }, 2000);
-            }
+            await login({
+                telegram_id: telegramId!,
+                code: code!
+            });
+            
+            toast.success(t("auth.telegramSuccess"));
+            setTimeout(() => {
+                router.push('/');
+            }, 1500);
         } catch (error: any) {
             console.error('Telegram login error:', error);
-            toast.error(t("auth.telegramConnectionError"));
+            
+            if (error.response?.data?.message === 'Invalid or expired verification code') {
+                toast.error('Mã xác thực không hợp lệ hoặc đã hết hạn');
+            } else if (error.response?.data?.message === 'Verification code has expired') {
+                toast.error('Mã xác thực đã hết hạn');
+            } else if (error.response?.data?.message === 'User not found') {
+                toast.error('Không tìm thấy người dùng');
+            } else {
+                toast.error(t("auth.telegramConnectionError"));
+            }
+            
             setTimeout(() => {
                 router.push('/login');
             }, 2000);

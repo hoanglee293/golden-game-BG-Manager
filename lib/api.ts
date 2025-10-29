@@ -8,7 +8,11 @@ import {
   DownlineStatsData,
   DownlineStatsFilters,
   UpdateCommissionRequest,
-  BgAffiliateStatusResponse
+  BgAffiliateStatusResponse,
+  WithdrawHistoryFilters,
+  AvailableWithdrawalResponse,
+  WithdrawRequestResponse,
+  WithdrawHistoryResponse
 } from './types'
 import { TelegramWalletService } from '@/services/api'
 
@@ -46,31 +50,87 @@ const getAffiliateTree = async (): Promise<AffiliateTreeData> => {
   return apiCall<AffiliateTreeData>('/bg-ref/trees')
 }
 
+// Helper function to transform API response to expected format
+const transformDownlineStatsResponse = (response: any): DownlineStatsData => {
+  const transformDetailedMember = (member: any) => {
+    return {
+      walletId: member.user_id || member.wallet_id,
+      level: member.level,
+      commissionPercent: parseFloat(member.commission_percent || member.commissionPercent || '0'),
+      totalCommission: member.total_commission || member.totalCommission || 0,
+      totalVolume: member.total_volume || member.totalVolume || 0, // Calculate from transactions if not provided
+      totalTransactions: member.total_transactions || member.totalTransactions || 0,
+      lastTransactionDate: member.last_transaction_date || member.lastTransactionDate || '',
+      bgAlias: member.bg_alias || member.bgAlias || '',
+      walletInfo: {
+        nickName: member.user_info?.fullname || member.user_info?.username || member.walletInfo?.nickName || '',
+        solanaAddress: member.wallet_info?.address || member.walletInfo?.solanaAddress || '',
+        ethAddress: member.wallet_info?.eth_address || member.walletInfo?.ethAddress || '',
+        createdAt: member.user_info?.created_at || member.walletInfo?.createdAt || '',
+        bittworldUid: member.user_id?.toString() || member.walletInfo?.bittworldUid || ''
+      }
+    }
+  }
+
+  const transformStats = (stats: any) => {
+    const transformed: any = {}
+    Object.keys(stats || {}).forEach(key => {
+      const stat = stats[key]
+      transformed[key] = {
+        count: stat.count || 0,
+        totalCommission: stat.total_commission || stat.totalCommission || 0,
+        totalVolume: stat.total_volume || stat.totalVolume || 0,
+        totalTransactions: stat.total_transactions || stat.totalTransactions || 0
+      }
+    })
+    return transformed
+  }
+
+  return {
+    isBgAffiliate: response.is_bg_affiliate || response.isBgAffiliate || false,
+    totalMembers: response.total_members || response.totalMembers || 0,
+    membersByLevel: response.members_by_level || response.membersByLevel || {},
+    totalCommissionEarned: response.total_commission_earned || response.totalCommissionEarned || 0,
+    totalVolume: response.total_volume || response.totalVolume || 0, // Might need to calculate
+    totalTransactions: response.total_transactions || response.totalTransactions || 0,
+    stats: transformStats(response.stats),
+    detailedMembers: (response.detailed_members || response.detailedMembers || []).map(transformDetailedMember)
+  }
+}
+
 const getDownlineStats = async (filters: DownlineStatsFilters = {}): Promise<DownlineStatsData> => {
   const queryParams = new URLSearchParams()
   
+  // Helper function to convert camelCase to snake_case
+  const toSnakeCase = (str: string) => {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+  }
+  
   Object.entries(filters).forEach(([key, value]) => {
     if (value) {
-      queryParams.append(key, value)
+      // Convert camelCase key to snake_case for API
+      const snakeKey = toSnakeCase(key)
+      queryParams.append(snakeKey, value)
     }
   })
 
   const endpoint = `/bg-ref/downline-stats${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
-  return apiCall<DownlineStatsData>(endpoint)
+  const response = await apiCall<any>(endpoint)
+  return transformDownlineStatsResponse(response.data || response)
 }
 
-const updateCommissionPercent = async (toWalletId: number, newPercent: number): Promise<any> => {
+const updateCommissionPercent = async (to_wallet_address: string, new_percent: number): Promise<any> => {
   const response = await axiosClient.put('/bg-ref/nodes/commission', {
-    toWalletId,
-    newPercent
+    to_wallet_address,
+    new_percent
   })
   
   return response.data
 }
 
-const updateAlias = async (toWalletId: number, newAlias: string): Promise<any> => {
+const updateAlias = async (to_wallet_address: string, newAlias: string): Promise<any> => {
   const response = await axiosClient.put('/bg-ref/nodes/alias', {
-    toWalletId,
+    to_wallet_address,
     newAlias
   })
   
@@ -797,82 +857,178 @@ const checkBgAffiliateStatusWithToken = async (): Promise<MyStatusData | null> =
 }
 
 // BG Affiliate Withdrawal API functions
-const createWithdrawRequest = async (): Promise<any> => {
+const createWithdrawRequest = async (): Promise<WithdrawRequestResponse> => {
   const response = await axiosClient.post('/bg-ref/withdraw')
   return response.data
 }
 
-const retryWithdrawRequest = async (withdrawId: number): Promise<any> => {
+const retryWithdrawRequest = async (withdrawId: number): Promise<WithdrawRequestResponse> => {
   const response = await axiosClient.post(`/bg-ref/withdraw/${withdrawId}/retry`)
   return response.data
 }
 
-const getWithdrawHistory = async (): Promise<any> => {
-  return apiCall<any>('/bg-ref/withdraw-history')
+const getWithdrawHistory = async (filters: WithdrawHistoryFilters = {}): Promise<WithdrawHistoryResponse> => {
+  const queryParams = new URLSearchParams()
+  
+  // Helper function to convert camelCase to snake_case
+  const toSnakeCase = (str: string) => {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+  }
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      // Convert camelCase key to snake_case for API
+      const snakeKey = toSnakeCase(key)
+      queryParams.append(snakeKey, value)
+    }
+  })
+
+  const endpoint = `/bg-ref/withdraw-history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+  return apiCall<WithdrawHistoryResponse>(endpoint)
 }
 
-const getAvailableWithdrawal = async (): Promise<any> => {
-  return apiCall<any>('/bg-ref/available-withdrawal')
+const getAvailableWithdrawal = async (): Promise<AvailableWithdrawalResponse> => {
+  return apiCall<AvailableWithdrawalResponse>('/bg-ref/available-withdrawal')
 }
 
 const getTraditionalReferralRewards = async (): Promise<any> => {
   return apiCall<any>('/bg-ref/traditional-referral-rewards')
 }
 
-// Mock data for withdrawal features
-const mockAvailableWithdrawal = {
-  totalUSD: 2500.75,
-  totalSOL: 42.15,
-  breakdown: {
-    walletRefRewardsUSD: 500.75,
-    walletRefRewardsCount: 12,
-    bgAffiliateRewardsUSD: 2000.00,
-    bgAffiliateRewardsCount: 45
+// Helper function to transform API response to component format
+const transformAvailableWithdrawal = (apiResponse: AvailableWithdrawalResponse | any) => {
+  // Handle both API response format and mock data format
+  const data = apiResponse.data || apiResponse
+  
+  // Check if it's the new API format
+  if (data.available_amount_mmp !== undefined) {
+    // New API format: available_amount_mmp (MMP tokens)
+    // Note: Assuming 1 MMP = 1 USD for now, adjust conversion rate as needed
+    const mmpAmount = Number(data.available_amount_mmp) || 0
+    return {
+      totalUSD: mmpAmount, // 1 MMP = 1 USD (adjust if needed)
+      totalSOL: 0, // Calculate based on current SOL price if needed
+      totalMMP: mmpAmount,
+      breakdown: {
+        walletRefRewardsUSD: 0,
+        walletRefRewardsCount: 0,
+        bgAffiliateRewardsUSD: mmpAmount,
+        bgAffiliateRewardsCount: Number(data.rewards_count) || 0
+      },
+      userInfo: {
+        userId: data.user_id,
+        username: data.username,
+        referralCode: data.referral_code,
+        hasWallet: data.has_wallet,
+        walletAddress: data.wallet_address
+      }
+    }
+  }
+  
+  // Legacy format (for backward compatibility)
+  return {
+    totalUSD: Number(data.totalUSD) || 0,
+    totalSOL: Number(data.totalSOL) || 0,
+    totalMMP: Number(data.totalMMP) || Number(data.totalUSD) || 0,
+    breakdown: {
+      walletRefRewardsUSD: Number(data.breakdown?.walletRefRewardsUSD) || 0,
+      walletRefRewardsCount: Number(data.breakdown?.walletRefRewardsCount) || 0,
+      bgAffiliateRewardsUSD: Number(data.breakdown?.bgAffiliateRewardsUSD) || 0,
+      bgAffiliateRewardsCount: Number(data.breakdown?.bgAffiliateRewardsCount) || 0
+    },
+    userInfo: {
+      userId: data.userInfo?.userId,
+      username: data.userInfo?.username,
+      referralCode: data.userInfo?.referralCode,
+      hasWallet: data.userInfo?.hasWallet,
+      walletAddress: data.userInfo?.walletAddress
+    }
   }
 }
 
-const mockWithdrawHistory = [
-  {
-    rwh_id: 2,
-    rwh_wallet_id: 3253750,
-    rwh_amount: "0.000005",
-    rwh_hash: null,
-    rwh_status: "retry",
-    rwh_date: "2025-07-15T09:08:46.146Z",
-    rwh_created_at: "2025-07-15T08:38:21.215Z",
-    rwh_updated_at: "2025-07-15T08:38:35.701Z"
-  },
-  {
-    rwh_id: 1,
-    rwh_wallet_id: 3253750,
-    rwh_amount: "0.000000",
-    rwh_hash: null,
-    rwh_status: "retry",
-    rwh_date: "2025-07-15T08:56:46.489Z",
-    rwh_created_at: "2025-07-15T08:26:21.538Z",
-    rwh_updated_at: "2025-07-15T08:38:35.613Z"
-  },
-  {
-    rwh_id: 3,
-    rwh_wallet_id: 3253750,
-    rwh_amount: "0.001500",
-    rwh_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    rwh_status: "completed",
-    rwh_date: "2025-07-14T10:30:00.000Z",
-    rwh_created_at: "2025-07-14T10:00:00.000Z",
-    rwh_updated_at: "2025-07-14T10:35:00.000Z"
-  },
-  {
-    rwh_id: 4,
-    rwh_wallet_id: 3253750,
-    rwh_amount: "0.002000",
-    rwh_hash: null,
-    rwh_status: "pending",
-    rwh_date: "2025-07-13T15:20:00.000Z",
-    rwh_created_at: "2025-07-13T15:00:00.000Z",
-    rwh_updated_at: "2025-07-13T15:00:00.000Z"
+const transformWithdrawHistory = (apiResponse: WithdrawHistoryResponse | any) => {
+  // Handle both API response format and mock data format
+  const response = apiResponse.data ? apiResponse : { data: apiResponse, pagination: null }
+  const historyItems = Array.isArray(response.data) ? response.data : []
+  
+  return historyItems.map((item: any) => {
+    // New API format
+    if (item.id !== undefined) {
+      return {
+        id: item.id,
+        username: item.username || '',
+        amount: Number(item.amount) || 0,
+        amount_usd: Number(item.amount_usd) || Number(item.amount) || 0,
+        address: item.address || '',
+        hash: item.hash || null,
+        status: (item.status || 'pending') as 'pending' | 'success' | 'failed' | 'retry',
+        created_at: item.created_at || new Date().toISOString()
+      }
+    }
+    
+    // Legacy format (rwh_* fields)
+    return {
+      id: item.rwh_id || item.id || 0,
+      username: item.username || `User_${item.rwh_wallet_id || ''}`,
+      amount: Number(item.rwh_amount || item.amount || 0),
+      amount_usd: Number(item.rwh_amount || item.amount || 0),
+      address: item.address || '',
+      hash: item.rwh_hash || item.hash || null,
+      status: (item.rwh_status || item.status || 'pending') as 'pending' | 'success' | 'failed' | 'retry',
+      created_at: item.rwh_created_at || item.created_at || new Date().toISOString()
+    }
+  })
+}
+
+// Mock data for withdrawal features (matching new API format)
+const mockAvailableWithdrawal: AvailableWithdrawalResponse = {
+  success: true,
+  message: "Successfully retrieved available withdrawal amount",
+  data: {
+    user_id: 142881,
+    username: "User_123456789",
+    referral_code: "ABC12345",
+    available_amount_mmp: 12.88,
+    rewards_count: 10,
+    has_wallet: true,
+    wallet_address: "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh"
   }
-]
+}
+
+const mockWithdrawHistory: WithdrawHistoryResponse = {
+  success: true,
+  message: "Successfully retrieved withdrawal history",
+  data: [
+    {
+      id: 123,
+      username: "User_123456789",
+      amount: 12.88,
+      amount_usd: 12.88,
+      address: "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+      hash: "PUetoscZVjukCAZVWsoykeM34mV8i7ALFFSDW271rinG2hrEZAAfbXjRxGFvH5EY866FEvEf9moh3bUKS99SVBd",
+      status: "success",
+      created_at: "2025-01-28T11:11:37.000Z"
+    },
+    {
+      id: 124,
+      username: "User_123456789",
+      amount: 5.50,
+      amount_usd: 5.50,
+      address: "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+      hash: null,
+      status: "pending",
+      created_at: "2025-01-29T10:30:00.000Z"
+    }
+  ],
+  pagination: {
+    page: 1,
+    limit: 10,
+    total: 2,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false
+  }
+}
 
 const mockTraditionalReferralRewards = {
   walletId: 456,
@@ -888,17 +1044,27 @@ const mockTraditionalReferralRewards = {
 // Fallback functions for withdrawal features
 export const getAvailableWithdrawalWithFallback = async () => {
   try {
-    return await getAvailableWithdrawal()
+    const response = await getAvailableWithdrawal()
+    return transformAvailableWithdrawal(response)
   } catch (error) {
-    return simulateApiCall(mockAvailableWithdrawal)
+    return transformAvailableWithdrawal(mockAvailableWithdrawal)
   }
 }
 
-export const getWithdrawHistoryWithFallback = async () => {
+export const getWithdrawHistoryWithFallback = async (filters: WithdrawHistoryFilters = {}) => {
   try {
-    return await getWithdrawHistory()
+    const response = await getWithdrawHistory(filters)
+    return {
+      ...response,
+      data: transformWithdrawHistory(response)
+    }
   } catch (error) {
-    return simulateApiCall(mockWithdrawHistory)
+    return {
+      success: true,
+      message: "Successfully retrieved withdrawal history",
+      data: transformWithdrawHistory(mockWithdrawHistory),
+      pagination: mockWithdrawHistory.pagination
+    }
   }
 }
 
@@ -907,19 +1073,20 @@ export const createWithdrawRequestWithFallback = async () => {
     return await createWithdrawRequest()
   } catch (error) {
     // Simulate successful withdrawal request
-    return simulateApiCall({
+    return simulateApiCall<WithdrawRequestResponse>({
       success: true,
-      message: "Tạo yêu cầu rút tiền thành công",
+      message: "BG commission withdrawal request completed",
       data: {
-        withdrawId: 124,
-        amountUSD: 2500.75,
-        amountSOL: 42.15,
-        breakdown: {
-          bgAffiliateRewards: 2000.00,
-          traditionalReferralRewards: 500.75,
-          totalUSD: 2500.75,
-          totalSOL: 42.15
-        }
+        user_id: 142881,
+        username: "User_123456789",
+        referral_code: "ABC12345",
+        total_withdrawn_mmp: 12.88,
+        rewards_count: 10,
+        withdraw_id: "124",
+        status: "success",
+        hash: null,
+        address: "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+        created_at: new Date().toISOString()
       }
     })
   }
@@ -930,12 +1097,20 @@ export const retryWithdrawRequestWithFallback = async (withdrawId: number) => {
     return await retryWithdrawRequest(withdrawId)
   } catch (error) {
     // Simulate successful retry
-    return simulateApiCall({
+    return simulateApiCall<WithdrawRequestResponse>({
       success: true,
-      message: "Thử lại rút tiền thành công",
+      message: "BG commission withdrawal retry completed",
       data: {
-        withdrawId: withdrawId,
-        status: "pending"
+        user_id: 142881,
+        username: "User_123456789",
+        referral_code: "ABC12345",
+        total_withdrawn_mmp: 0,
+        rewards_count: 0,
+        withdraw_id: withdrawId.toString(),
+        status: "pending",
+        hash: null,
+        address: "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+        created_at: new Date().toISOString()
       }
     })
   }

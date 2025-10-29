@@ -13,45 +13,52 @@ import { format } from "date-fns"
 import { useLang } from "@/app/lang"
 import { toast } from "sonner"
 
-interface ReferrerInfo {
-  solanaAddress: string
-  nickName: string
-  bgAlias: string
+interface TreeInfo {
+  tree_id: number
+  root_user_id: number
+  total_commission_percent: string
+  alias: string | null
+  created_at: string
 }
 
-interface TreeInfo {
-  treeId: number
-  referrer: ReferrerInfo | null
-  totalCommissionPercent: number
-  createdAt: string
+interface UserInfo {
+  id: number
+  username: string
+  email: string
+  fullname: string
+  referral_code: string
+}
+
+interface DownlineStats {
+  total_reward: number
+  total_transactions: number
 }
 
 interface WalletInfo {
-  nickName: string
-  bgAlias: string
-  solanaAddress: string
-  ethAddress: string
-  walletId: number
-  bittworldUid: string
+  address?: string
+  solanaAddress?: string
+  ethAddress?: string
+  nickName?: string
 }
 
 interface DownlineNode {
-  nodeId: number
-  solanaAddress: string
-  commissionPercent: string
-  effectiveFrom: string
-  totalVolume: number
-  totalReward: number
-  totalTrans: number
-  walletInfo: WalletInfo
-  bgAlias: string
+  user_id: number
+  parent_user_id: number
+  commission_percent: string
+  alias: string
+  effective_from: string
+  level: number
+  user: UserInfo
+  stats: DownlineStats
   children: DownlineNode[]
+  wallet_info?: WalletInfo
+  wallet_address?: string
 }
 
 interface AffiliateTreeData {
-  isBgAffiliate: boolean
-  treeInfo: TreeInfo
-  downlineStructure: DownlineNode[]
+  is_bg_affiliate: boolean
+  tree_info: TreeInfo
+  downline_structure: DownlineNode[]
 }
 
 // Update Commission Modal Component
@@ -96,13 +103,11 @@ function UpdateCommissionModal({
       return false
     }
 
-    if (percent > parseFloat(node.commissionPercent)) {
-      setValidationError(`${t("commission.rateExceedsCurrent")} (${node.commissionPercent}%)`)
-      return false
-    }
+    // Allow increasing commission if needed (removed restriction)
+    // Note: Commission can only be set within parent's limit, which is already checked above
 
-    if (percent > treeParent.totalCommissionPercent) {
-      setValidationError(t("commission.rateExceedsParent", { percent: treeParent.totalCommissionPercent }))
+    if (percent > parseFloat(treeParent.total_commission_percent)) {
+      setValidationError(t("commission.rateExceedsParent", { percent: parseFloat(treeParent.total_commission_percent) }))
       return false
     }
 
@@ -121,14 +126,36 @@ function UpdateCommissionModal({
     }
   }
 
+  // Helper function to get wallet address from node
+  const getWalletAddress = (): string | null => {
+    // Try to get wallet address from various possible fields
+    if (node.wallet_address) return node.wallet_address
+    if (node.wallet_info?.address) return node.wallet_info.address
+    if (node.wallet_info?.solanaAddress) return node.wallet_info.solanaAddress
+    // Fallback: use user_id if API backend supports it
+    // Note: According to API docs, we need wallet_address, but backend might accept user_id
+    return null
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate input before submitting
+    if (!validateInput(newPercent)) {
+      return
+    }
+
     setIsLoading(true)
     setSuccess(false)
 
     try {
       const percent = parseFloat(newPercent)
-      await updateCommissionPercent(node.walletInfo.walletId, percent)
+      const walletAddress = getWalletAddress()
+      
+      // If we have wallet address, use it; otherwise fallback to user_id
+      const identifier = walletAddress || node.user_id.toString()
+      
+      await updateCommissionPercent(identifier, percent)
       setSuccess(true)
       toast.success(t("commission.updateSuccess"))
       setNewPercent("")
@@ -140,13 +167,24 @@ function UpdateCommissionModal({
       }, 1500)
     } catch (error: any) {
       console.error("Failed to update commission:", error)
-      // Check if the error message contains the commission limit error
-      if (error.response?.data?.message?.includes("Commission percent cannot exceed")) {
-        // Extract the percentage from the error message or use treeParent.totalCommissionPercent
-        const maxPercent = treeParent.totalCommissionPercent
+      
+      // Enhanced error handling
+      const errorMessage = error.response?.data?.message || error.message || ""
+      
+      // Check for specific error cases
+      if (errorMessage.includes("Commission percent cannot exceed") || 
+          errorMessage.includes("exceeds") ||
+          errorMessage.includes("vượt quá")) {
+        const maxPercent = parseFloat(treeParent.total_commission_percent)
         toast.error(t("commission.rateExceedsParent", { percent: maxPercent }))
+      } else if (errorMessage.includes("not found") || errorMessage.includes("không tìm thấy")) {
+        toast.error(t("commission.userNotFound"))
+      } else if (errorMessage.includes("permission") || errorMessage.includes("quyền")) {
+        toast.error(t("commission.noPermission"))
+      } else if (errorMessage.includes("direct downline") || errorMessage.includes("trực tiếp")) {
+        toast.error(t("commission.onlyDirectDownline"))
       } else {
-        toast.error(error.response?.data?.message || t("commission.updateError"))
+        toast.error(errorMessage || t("commission.updateError"))
       }
     } finally {
       setIsLoading(false)
@@ -173,7 +211,7 @@ function UpdateCommissionModal({
             <DialogTitle className="text-lg">{t("commission.updateCommission")}</DialogTitle>
           </div>
           <DialogDescription className="text-sm">
-            {t("commission.updateCommission")} {t("affiliate.downline")}: {node.walletInfo.bgAlias ?? node.walletInfo.nickName}
+            {t("commission.updateCommission")} {t("affiliate.downline")}: {node.alias || node.user.fullname || node.user.username}
           </DialogDescription>
         </DialogHeader>
 
@@ -186,7 +224,7 @@ function UpdateCommissionModal({
             <Input
               id="currentPercent"
               type="number"
-              value={node.commissionPercent}
+              value={node.commission_percent}
               disabled
               className="bg-gray-50 text-sm"
             />
@@ -200,12 +238,21 @@ function UpdateCommissionModal({
             <Input
               id="newPercent"
               type="number"
+              step="0.01"
+              min="0"
+              max={treeParent.total_commission_percent}
               value={newPercent}
               onChange={handleInputChange}
-              placeholder={t("commission.percentage") + " (0-100)"}
+              placeholder={`${t("commission.percentage")} (0-${treeParent.total_commission_percent}%)`}
               disabled={isLoading}
-              className={`text-sm transition-all duration-200 hover:scale-[1.02] focus:scale-[1.02]`}
+              className={`text-sm transition-all duration-200 hover:scale-[1.02] focus:scale-[1.02] ${validationError ? 'border-red-500 focus:border-red-500' : ''}`}
             />
+            {validationError && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                {validationError}
+              </p>
+            )}
 
           </div>
 
@@ -252,6 +299,7 @@ function UpdateAliasModal({
   onClose: () => void
   onSuccess: () => void
 }) {
+  console.log(node)
   const [newAlias, setNewAlias] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -289,7 +337,8 @@ function UpdateAliasModal({
     setSuccess(false)
 
     try {
-      await updateAlias(node.walletInfo.walletId, newAlias.trim())
+      // Use user_id as walletId for the API call
+      await updateAlias(node.user_id.toString(), newAlias.trim())
       setSuccess(true)
       toast.success(t("commission.aliasUpdateSuccess"))
       setNewAlias("")
@@ -327,7 +376,7 @@ function UpdateAliasModal({
             <DialogTitle className="text-lg">{t("commission.updateAlias")}</DialogTitle>
           </div>
           <DialogDescription className="text-sm">
-            {t("commission.updateAliasFor")}: {node.bgAlias ?? node.walletInfo.nickName}
+            {t("commission.updateAliasFor")}: {node.alias || node.user.fullname || node.user.username}
           </DialogDescription>
         </DialogHeader>
 
@@ -340,7 +389,7 @@ function UpdateAliasModal({
             <Input
               id="currentAlias"
               type="text"
-              value={node.bgAlias ?? node.walletInfo.nickName}
+              value={node.alias || node.user.fullname || node.user.username}
               disabled
               className="bg-gray-50 text-sm"
             />
@@ -456,13 +505,12 @@ function TreeNodeComponent({
             {getLevelIcon(level)}
           </div>
           <div className="flex flex-col min-w-0 ">
-            <div className="font-medium truncate text-sm sm:text-sm group-hover:text-blue-600 transition-colors">{node?.bgAlias ?? node.walletInfo.nickName}</div>
+            <div className="font-medium truncate text-sm sm:text-sm group-hover:text-blue-600 transition-colors">{ node.user.fullname || node.user.username}</div>
             <div className="text-xs opacity-75 truncate flex items-center gap-1">
-              <Wallet className="h-2 w-2" />
-              <span className="sm:hidden">{node.solanaAddress.substring(0, 6)}...{node.solanaAddress.substring(node.solanaAddress.length - 4)}</span>
-              <span className="hidden sm:inline">{node.solanaAddress.substring(0, 8)}...{node.solanaAddress.substring(node.solanaAddress.length - 6)}</span>
+              <User className="h-2 w-2" />
+              <span>{node.user.email}</span>
             </div>
-            <div className="text-xs font-semibold">Bittworld UID: {node.walletInfo.bittworldUid}</div>
+            <div className="text-xs font-semibold">Referral Code: {node.user.referral_code}</div>
           </div>
         </div>
 
@@ -471,20 +519,13 @@ function TreeNodeComponent({
           <div className="flex items-center gap-1 text-xs bg-gradient-to-r from-green-50 to-emerald-50 px-2 py-1 rounded">
             <DollarSign className="h-3 w-3 text-green-500" />
             <span className="text-gray-700 font-medium">{t("stats.totalReward")}:</span>
-            <span className="font-bold text-green-600">{node.totalReward.toLocaleString()}</span>
+            <span className="font-bold text-green-600">{node.stats.total_reward.toLocaleString()}</span>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1 text-xs bg-gradient-to-r from-blue-50 to-cyan-50 px-2 py-1 rounded">
-
-              <BarChart3 className="h-3 w-3 text-blue-500" />
-              <span className="text-gray-700 font-medium">{t("stats.totalVolume")}:</span>
-              <span className="font-bold text-blue-600">{node.totalVolume.toLocaleString()}</span>
-            </div>
-
             <div className="flex items-center gap-1 text-xs bg-gradient-to-r from-purple-50 to-pink-50 px-2 py-1 rounded">
               <Activity className="h-3 w-3 text-purple-500" />
               <span className="text-gray-700 font-medium">{t("stats.totalTransactions")}:</span>
-              <span className="font-bold text-purple-600">{node.totalTrans.toLocaleString()}</span>
+              <span className="font-bold text-purple-600">{node.stats.total_transactions.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -494,7 +535,7 @@ function TreeNodeComponent({
           <div className="flex gap-1">
             <Badge variant="secondary" className="text-xs sm:text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white border-none">
               <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-              {node.commissionPercent}%
+              {node.commission_percent}%
             </Badge>
             <Badge variant="outline" className="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white border-none">
               <Target className="h-2 w-2 mr-1" />
@@ -513,15 +554,7 @@ function TreeNodeComponent({
               <span className="sm:hidden">{t("commission.updatePercentCommission")}</span>
             </Button>
           )}
-           <Button
-              size="sm"
-              className="bg-[#0bcd66] text-white text-xs px-2 py-1 sm:px-3 sm:py-2 transition-all duration-200 hover:scale-105"
-              onClick={() => onUpdateAlias({ ...node, level })}
-            >
-              <User className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-              <span className="sm:hidden">{t("commission.updateAlias")}</span>
-              <span className="hidden sm:inline">{t("commission.updateAlias")}</span>
-            </Button>
+         
         </div>
       </div>
 
@@ -530,7 +563,7 @@ function TreeNodeComponent({
         <div className="ml-4 sm:ml-6 border-l-2 border-dashed border-gray-300 pl-4 sm:pl-6">
           {node.children.map((childNode) => (
             <TreeNodeComponent
-              key={childNode.nodeId}
+              key={childNode.user_id}
               node={childNode}
               level={level + 1}
               onUpdateCommission={onUpdateCommission}
@@ -558,8 +591,8 @@ export default function AffiliateTree() {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await getAffiliateTreeWithFallback()
-        setTreeData(data as unknown as AffiliateTreeData)
+        const response = await getAffiliateTreeWithFallback()
+        setTreeData((response as any)?.data as unknown as AffiliateTreeData)
       } catch (err) {
         setError(t("errors.networkError"))
         console.error(err)
@@ -594,8 +627,8 @@ export default function AffiliateTree() {
     // Refresh the tree data after successful update
     const fetchTree = async () => {
       try {
-        const data = await getAffiliateTreeWithFallback()
-        setTreeData(data as unknown as AffiliateTreeData)
+        const response = await getAffiliateTreeWithFallback()
+        setTreeData((response as any)?.data as unknown as AffiliateTreeData)
       } catch (err) {
         console.error(err)
       }
@@ -635,16 +668,12 @@ export default function AffiliateTree() {
     return <div className="text-red-500 text-center py-8">{t("errors.networkError")}</div>
   }
 
-  if (!treeData || !treeData.isBgAffiliate) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
-        {t("messages.accessDenied")}
-      </div>
-    )
+  if (!treeData) {
+    return <div className="text-center text-muted-foreground py-8">{t("common.noData")}</div>
   }
 
   // Flatten the tree structure and group nodes by level for statistics
-  const flattenedNodes = flattenTree(treeData.downlineStructure || [])
+  const flattenedNodes = flattenTree(treeData?.downline_structure || [])
   const nodesByLevel = flattenedNodes.reduce((acc: Record<number, number>, node) => {
     acc[node.level] = (acc[node.level] || 0) + 1
     return acc
@@ -675,7 +704,7 @@ export default function AffiliateTree() {
             <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg group">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Hash className="h-4 w-4 text-blue-500 group-hover:animate-pulse" />
-                <div className="text-lg sm:text-2xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">{treeData.treeInfo.treeId}</div>
+                <div className="text-lg sm:text-2xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">{treeData.tree_info.tree_id}</div>
               </div>
               <div className="text-xs sm:text-sm text-blue-600">{t("common.id")}</div>
             </div>
@@ -689,7 +718,7 @@ export default function AffiliateTree() {
             <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg group">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-yellow-500 group-hover:animate-pulse" />
-                <div className="text-lg sm:text-2xl font-bold text-yellow-600 group-hover:text-yellow-700 transition-colors">{treeData.treeInfo.totalCommissionPercent}%</div>
+                <div className="text-lg sm:text-2xl font-bold text-yellow-600 group-hover:text-yellow-700 transition-colors">{treeData.tree_info.total_commission_percent}%</div>
               </div>
               <div className="text-xs sm:text-sm text-yellow-600">{t("affiliate.yourCommissionPercent")}</div>
             </div>
@@ -701,33 +730,7 @@ export default function AffiliateTree() {
               <div className="text-xs sm:text-sm text-purple-600">{t("affiliate.totalLevels")}</div>
             </div>
           </div>
-
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-md group">
-            <h4 className="font-semibold mb-2 text-sm sm:text-base flex items-center gap-2">
-              <Network className="h-4 w-4 text-gray-600" />
-              {t("affiliate.referrer")}:
-            </h4>
-            {treeData.treeInfo.referrer ? (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded">
-                    <User className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
-                  </div>
-                  <span className="font-medium text-sm sm:text-base group-hover:text-blue-600 transition-colors">{treeData.treeInfo.referrer.nickName}</span>
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-yellow-500 to-orange-600 text-white border-none">
-                    <Wallet className="h-2 w-2 mr-1" />
-                    <span className="sm:hidden">{treeData.treeInfo.referrer.solanaAddress.substring(0, 6)}...</span>
-                    <span className="hidden sm:inline">{treeData.treeInfo.referrer.solanaAddress.substring(0, 8)}...</span>
-                  </Badge>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-muted-foreground text-sm sm:text-base">{t("affiliate.noReferrer")}</span>
-              </div>
-            )}
-          </div>
+         
         </CardContent>
       </Card>
 
@@ -750,7 +753,7 @@ export default function AffiliateTree() {
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          {(treeData.downlineStructure?.length || 0) === 0 ? (
+          {(treeData.downline_structure?.length || 0) === 0 ? (
             <div className="text-center py-8 sm:py-12 text-muted-foreground">
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-full flex items-center justify-center animate-pulse">
                 <Users className="h-8 w-8 sm:h-12 sm:w-12 text-blue-500" />
@@ -769,7 +772,7 @@ export default function AffiliateTree() {
                   <Badge
                     key={level}
                     variant="secondary"
-                    className="text-xs whitespace-nowrap bg-gradient-to-r from-blue-500 to-purple-600 text-white border-none transition-all duration-200 hover:scale-105 animate-in slide-in-from-bottom-2 duration-500"
+                    className="text-xs whitespace-nowrap bg-gradient-to-r from-blue-500 to-purple-600 text-white border-none transition-all duration-200 hover:scale-105 animate-in slide-in-from-bottom-2"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <Target className="h-2 w-2 mr-1" />
@@ -780,9 +783,9 @@ export default function AffiliateTree() {
 
               {/* Tree Structure */}
               <div className="border rounded-lg p-2 sm:p-4 bg-gradient-to-br from-white to-gray-50">
-                {treeData.downlineStructure.map((node, index) => (
+                {treeData.downline_structure.map((node, index) => (
                   <TreeNodeComponent
-                    key={node.nodeId}
+                    key={node.user_id}
                     node={node}
                     level={1}
                     onUpdateCommission={handleUpdateCommission}
@@ -799,7 +802,7 @@ export default function AffiliateTree() {
         <UpdateCommissionModal
           node={selectedNode}
           isOpen={isModalOpen}
-          treeParent={treeData.treeInfo}
+          treeParent={treeData.tree_info}
           onClose={handleModalClose}
           onSuccess={handleUpdateSuccess}
         />

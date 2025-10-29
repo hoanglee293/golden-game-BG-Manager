@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge"
 import { getCommissionHistoryWithFallback } from "@/lib/api"
 import { CommissionEntry } from "@/lib/types"
 import { format } from "date-fns"
-import { Loader2, Wallet, Calendar, DollarSign, Hash, TrendingUp, Sparkles, Receipt, Clock, Target, BarChart3, Copy, Activity } from "lucide-react"
+import { Loader2, Wallet, Calendar, DollarSign, Hash, TrendingUp, Sparkles, Receipt, Clock, Target, BarChart3, Copy, Activity, User } from "lucide-react"
 import { useLang } from "@/app/lang"
 import { useResponsive } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 export default function CommissionHistory() {
   const [history, setHistory] = useState<CommissionEntry[]>([])
+  console.log("history", history)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { t, lang } = useLang()
@@ -24,8 +25,12 @@ export default function CommissionHistory() {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await getCommissionHistoryWithFallback()
-        setHistory(data)
+        const response = await getCommissionHistoryWithFallback()
+        console.log("response", response)
+        const data = (response as any)?.data || response as unknown as CommissionEntry[]
+        // Ensure data is always an array
+        const historyArray = Array.isArray(data) ? data : []
+        setHistory(historyArray as unknown as CommissionEntry[])
       } catch (err) {
         setError(t("errors.networkError"))
         console.error(err)
@@ -57,9 +62,9 @@ export default function CommissionHistory() {
   }
 
   // Format commission amount
-  const formatAmount = (amount: string) => {
-    const num = Number.parseFloat(amount)
-    return `$${num.toFixed(6)}`
+  const formatAmount = (amount: string | number) => {
+    const num = typeof amount === 'string' ? Number.parseFloat(amount) : amount
+    return `$${num.toFixed(4)}`
   }
 
   if (isLoading) {
@@ -96,7 +101,7 @@ export default function CommissionHistory() {
           </div>
         </CardHeader>
         <CardContent className="px-4 mx-4 rounded-lg pb-0 animate-in slide-in-from-bottom-2 duration-500" style={{ boxShadow: "0px 3px 10px 9px #1f1f1f14" }}>
-          {history.length === 0 ? (
+          {history?.length === 0 ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-full flex items-center justify-center animate-pulse">
                 <TrendingUp className="w-8 h-8 text-blue-500" />
@@ -105,7 +110,7 @@ export default function CommissionHistory() {
             </div>
           ) : (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-              {history.map((entry, index) => (
+              {history?.map((entry, index) => (
                 <Card 
                   key={entry.bittworldUid} 
                   className="border border-border/50 hover:border-green-300 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group animate-in slide-in-from-bottom-2 "
@@ -117,11 +122,11 @@ export default function CommissionHistory() {
                         <div className="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded">
                           <Hash className="w-3 h-3 text-white" />
                         </div>
-                        <span className="text-sm text-muted-foreground group-hover:text-blue-600 transition-colors">#{entry.bacr_order_id}</span>
+                        <span className="text-sm text-muted-foreground group-hover:text-blue-600 transition-colors">#{entry.order_id || entry.bacr_order_id}</span>
                       </div>
-                      <Badge variant="secondary" className="text-xs bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none flex items-center gap-1">
                         <Target className="h-2 w-2" />
-                        {t("auth.level")} {entry.bacr_level}
+                        {t("auth.level")} {entry.level || entry.bacr_level}
                       </Badge>
                     </div>
                     
@@ -136,10 +141,10 @@ export default function CommissionHistory() {
                           </p>
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-mono text-yellow-500 font-semibold truncate">
-                              {formatWalletAddress(entry.bacr_wallet)}
+                              {formatWalletAddress(entry.wallet_address || entry.bacr_wallet || "")}
                             </p>
                             <button 
-                              onClick={() => navigator.clipboard.writeText(entry.bacr_wallet)}
+                              onClick={() => navigator.clipboard.writeText(entry.wallet_address || entry.bacr_wallet || "")}
                               className="p-1 hover:bg-yellow-100 rounded transition-all duration-200 hover:scale-110"
                             >
                               <Copy className="h-3 w-3 text-yellow-500" />
@@ -157,7 +162,7 @@ export default function CommissionHistory() {
                             {t("commission.amount")}
                           </p>
                           <p className="text-lg font-bold text-green-500 group-hover:text-green-600 transition-colors">
-                            {formatAmount(entry.bacr_commission_amount)}
+                            {formatAmount(entry.commission_amount || entry.bacr_commission_amount || 0)}
                           </p>
                         </div>
                       </div>
@@ -171,7 +176,7 @@ export default function CommissionHistory() {
                             {t("commission.date")}
                           </p>
                           <p className="text-sm group-hover:text-blue-600 transition-colors">
-                            {format(new Date(entry.bacr_created_at), getDateFormat() + " HH:mm")}
+                            {format(new Date(entry.created_at || entry.bacr_created_at || ""), getDateFormat() + " HH:mm")}
                           </p>
                         </div>
                       </div>
@@ -201,7 +206,7 @@ export default function CommissionHistory() {
         </div>
       </CardHeader>
       <CardContent className="m-0 p-0 rounded-lg pb-0 animate-in slide-in-from-bottom-2 duration-500 delay-200" style={{ boxShadow: "0px 3px 10px 9px #1f1f1f14" }}>
-        {history.length === 0 ? (
+        {history?.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-full flex items-center justify-center animate-pulse">
               <TrendingUp className="w-8 h-8 text-blue-500" />
@@ -214,22 +219,22 @@ export default function CommissionHistory() {
               <Table className="w-full relative">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow className="bg-gradient-to-r from-green-500/50 to-emerald-600/50">
-                    <TableHead className="font-semibold text-xs sm:text-sm text-gray-950 px-1 sm:px-3 py-2 rounded-tl-xl">
-                      <div className="inline-flex items-center gap-1">
-                        <Hash className="h-3 w-3" />
-                        BITWORLD UID
-                      </div>
-                    </TableHead>
+                      <TableHead className="font-semibold text-xs sm:text-sm text-gray-950 px-1 sm:px-3 py-2 rounded-tl-xl">
+                        <div className="inline-flex items-center gap-1">
+                          <Hash className="h-3 w-3" />
+                          ID
+                        </div>
+                      </TableHead>
                     <TableHead className="font-semibold text-xs sm:text-sm text-gray-950 px-1 sm:px-3 py-2">
                       <div className="inline-flex items-center gap-1">
-                        <Receipt className="h-3 w-3" />
-                        {t("commission.orderId")}
+                        <Wallet className="h-3 w-3" />
+                        {t("commission.name")}
                       </div>
                     </TableHead>
                     <TableHead className="font-semibold text-xs sm:text-sm text-gray-950 px-1 sm:px-3 py-2">
                       <div className="inline-flex items-center gap-1">
                         <Wallet className="h-3 w-3" />
-                        {t("commission.receivingWallet")}
+                        {t("commission.wallet")}
                       </div>
                     </TableHead>
                     <TableHead className="text-right font-semibold text-xs sm:text-sm text-gray-950 px-1 sm:px-3 py-2">
@@ -253,30 +258,29 @@ export default function CommissionHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="max-h-[80vh] overflow-y-auto">
-                  {history.map((entry, index) => (
+                  {history?.map((entry, index) => (
                     <TableRow 
                       key={entry.bittworldUid} 
                       className="hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all duration-200 animate-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${index * 30}ms` }}
                     >
-                      <TableCell className="font-mono text-sm px-1 sm:px-3 py-2">
+                      <TableCell className="font-mono text-sm px-1 sm:px-3 py-2 hover:text-blue-600 transition-colors">
                         <div className="inline-flex items-center gap-1">
-                          <Hash className="h-3 w-3 text-blue-500" />
-                          {entry?.bittworldUid ?? entry.bacr_id}
+                          #{entry.order_id || entry.bacr_order_id}
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm px-1 sm:px-3 py-2 hover:text-blue-600 transition-colors">
                         <div className="inline-flex items-center gap-1">
-                          <Receipt className="h-3 w-3 text-purple-500" />
-                          #{entry.bacr_order_id}
+                          <User className="h-3 w-3 text-purple-500" />
+                          {entry.order_user.fullname}
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm text-yellow-500 font-semibold px-1 sm:px-3 py-2">
                         <div className="inline-flex items-center gap-1">
                           <Wallet className="h-3 w-3" />
-                          <span>{formatWalletAddress(entry.bacr_wallet)}</span>
+                          <span>{formatWalletAddress(entry.wallet_address || entry.bacr_wallet || "")}</span>
                           <button 
-                            onClick={() => navigator.clipboard.writeText(entry.bacr_wallet)}
+                            onClick={() => navigator.clipboard.writeText(entry.wallet_address || entry.bacr_wallet || "")}
                             className="p-1 hover:bg-yellow-100 rounded transition-all duration-200 hover:scale-110"
                           >
                             <Copy className="h-2 w-2" />
@@ -285,21 +289,21 @@ export default function CommissionHistory() {
                       </TableCell>
                       <TableCell className="text-right sticky right-0 bg-background font-bold text-green-500 px-1 sm:px-3 py-2">
                         <div className="inline-flex items-center justify-end gap-1">
-                          {formatAmount(entry.bacr_commission_amount)}
+                          {formatAmount(entry.commission_amount || entry.bacr_commission_amount || 0)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right px-1 sm:px-3 py-2">
                         <div className="inline-flex items-center justify-end gap-1">
                           <Badge variant="secondary" className="text-xs bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none">
                             <Target className="h-2 w-2 mr-1" />
-                            {entry.bacr_level}
+                            {entry.level || entry.bacr_level}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-sm px-1 sm:px-3 py-2">
                         <div className="inline-flex items-center justify-end gap-1">
                           <Calendar className="h-3 w-3 text-gray-500" />
-                          {format(new Date(entry.bacr_created_at), getDateFormat() + " HH:mm")}
+                          {format(new Date(entry.created_at || entry.bacr_created_at || ""), getDateFormat() + " HH:mm")}
                         </div>
                       </TableCell>
                     </TableRow>

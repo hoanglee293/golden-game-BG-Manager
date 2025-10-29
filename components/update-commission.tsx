@@ -35,16 +35,10 @@ export default function UpdateCommission() {
     setSuccess(false)
 
     try {
-      await updateCommissionPercent(parseInt(toWalletId), percent)
-      setSuccess(true)
+      await updateCommissionPercent(toWalletId, percent)
       toast.success(t("commission.updateSuccess"))
-      setToWalletId("")
-      setNewPercent("")
     } catch (error) {
-      console.error("Failed to update commission:", error)
       toast.error(t("commission.updateError"))
-    } finally {
-      setIsLoading(false)
     }
   }
 
