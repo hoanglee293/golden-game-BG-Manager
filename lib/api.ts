@@ -119,9 +119,9 @@ const getDownlineStats = async (filters: DownlineStatsFilters = {}): Promise<Dow
   return transformDownlineStatsResponse(response.data || response)
 }
 
-const updateCommissionPercent = async (to_wallet_address: string, new_percent: number): Promise<any> => {
+const updateCommissionPercent = async (to_user_id: number, new_percent: number): Promise<any> => {
   const response = await axiosClient.put('/bg-ref/nodes/commission', {
-    to_wallet_address,
+    to_user_id,
     new_percent
   })
   

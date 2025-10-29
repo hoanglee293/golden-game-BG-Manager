@@ -155,7 +155,7 @@ function UpdateCommissionModal({
       // If we have wallet address, use it; otherwise fallback to user_id
       const identifier = walletAddress || node.user_id.toString()
       
-      await updateCommissionPercent(identifier, percent)
+      await updateCommissionPercent(node.user_id, percent)
       setSuccess(true)
       toast.success(t("commission.updateSuccess"))
       setNewPercent("")
